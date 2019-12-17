@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>HTML-DOCX test</title>
+    <script src="./tinymce-4.1/tinymce.min.js"></script>
+    <script src="./html-docx-js-master/test/vendor/FileSaver.js"></script>
+    <script src="./html-docx-js-master/dist/html-docx.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+</head>
+<body>
+<p>Enter/paste your document here:</p>
+<textarea id="content" cols="60" rows="10">
+    <p>We all live in a yellow submarine, yellow submarine, yellow submarine, yellow submarine</p>
+    <p>Images can also be exported if you source them as base64 DATA URI.</p>
+  </textarea>
+<div class="page-orientation">
+    <span>Page orientation:</span>
+    <label><input type="radio" name="orientation" value="portrait" checked>Portrait</label>
+    <label><input type="radio" name="orientation" value="landscape">Landscape</label>
+</div>
+<button id="convert">Save to word</button>
+<button id="save_document">save_document</button>
+<button id="load_document">load_document</button>
+<div id="download-area"></div>
+
+<script>
+    $(function () {
+        var myListItems = ['Item1', 'Item2', 'Item3', 'Item4', 'Item5', 'Item6', 'Item7', 'Item8', 'Item9', 'Item10', 'Item11'];
+
+        tinymce.PluginManager.add('insert_template', function (editor) {
+            var menuItems = [];
+            tinymce.each(myListItems, function (myListItemName) {
+                menuItems.push({
+                    text: myListItemName,
+                    onclick: function () {
+                        editor.insertContent(myListItemName);
+                    }
+                });
+            });
+
+            editor.addButton('insert_template', {
+                type: 'menubutton',
+                text: 'Вставить шаблон',
+                icon: 'code',
+                menu: menuItems
+            });
+
+            editor.addMenuItem('insert_template_dropdown', {
+                icon: 'code',
+                text: 'Вставить шаблон',
+                menu: menuItems,
+                context: 'insert',
+                prependToContext: true
+            });
+        });
+
+
+        tinymce.PluginManager.add('plugin_help', function (editor, url) {
+            // Adds a menu item to the tools menu
+            editor.addMenuItem('plugin_help', {
+                text: 'Справка',
+                context: 'help',
+                onclick: function () {
+                    // Open window with a specific url
+                    editor.windowManager.open({
+                        title: 'Справка',
+                        url: 'file:///D:/Projects/wysiwyg/help_modal.html',
+                        width: 450,
+                        height: 350,
+                        buttons: [{
+                            text: 'Закрыть',
+                            onclick: 'close'
+                        }]
+                    });
+                }
+            });
+        });
+
+        tinymce.init({
+                selector: '#content',
+                language: 'ru',
+                inline: true,
+                plugins: [
+                    "insert_template plugin_help advlist autolink lists charmap print preview anchor",
+                    "searchreplace visualblocks fullscreen fullpage insertdatetime media table contextmenu paste"
+                ],
+                toolbar: "plugin_help | insertfile undo redo | styleselect | bold italic | " +
+                    "alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | insert_template",
+                menu: {
+                    file: {title: 'File', items: 'preview print'},
+                    edit: {title: 'Edit', items: 'undo redo | cut copy paste pastetext | selectall | searchreplace'},
+                    insert: {title: 'Insert', items: 'insert_template_dropdown | charmap'},
+                    view: {title: 'View', items: 'visualblocks | preview fullscreen'},
+                    format: {
+                        title: 'Format',
+                        items: 'bold italic underline strikethrough superscript subscript | formats | removeformat'
+                    },
+                    table: {title: 'Table', items: 'inserttable tableprops deletetable | cell row column'},
+                    tools: {title: 'Tools', items: 'example'},
+                    help: {title: 'Help', items: 'plugin_help'}
+                },
+                branding: false,
+                statusbar: false,
+            }
+        );
+
+        var text = '';
+        $('#save_document').on('click', function (e) {
+            text = tinymce.activeEditor.getContent();
+            console.log(text);
+        });
+        $('#load_document').on('click', function (e) {
+            tinymce.activeEditor.setContent(text)
+        });
+
+        document.getElementById('convert').addEventListener('click', function (e) {
+            e.preventDefault();
+            // convertImagesToBase64()
+            // for demo purposes only we are using below workaround with getDoc() and manual
+            // HTML string preparation instead of simple calling the .getContent(). Becasue
+            // .getContent() returns HTML string of the original document and not a modified
+            // one whereas getDoc() returns realtime document - exactly what we need.
+            var contentDocument = tinymce.get('content').getDoc();
+            var content = '<!DOCTYPE html>' + contentDocument.documentElement.outerHTML;
+            var orientation = document.querySelector('.page-orientation input:checked').value;
+            var converted = htmlDocx.asBlob(content, {orientation: orientation});
+            saveAs(converted, 'test.docx');
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(converted);
+            link.download = 'document.docx';
+            link.appendChild(document.createTextNode('Click here if your download has not started automatically'));
+            var downloadArea = document.getElementById('download-area');
+            downloadArea.innerHTML = '';
+            downloadArea.appendChild(link);
+        });
+
+        // img save to docx
+        // function convertImagesToBase64() {
+        //     contentDocument = tinymce.get('content').getDoc();
+        //     var regularImages = contentDocument.querySelectorAll("img");
+        //     var canvas = document.createElement('canvas');
+        //     var ctx = canvas.getContext('2d');
+        //     [].forEach.call(regularImages, function (imgElement) {
+        //         // preparing canvas for drawing
+        //         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        //         canvas.width = imgElement.width;
+        //         canvas.height = imgElement.height;
+        //         ctx.drawImage(imgElement, 0, 0);
+        //         // by default toDataURL() produces png image, but you can also export to jpeg
+        //         // checkout function's documentation for more details
+        //         var dataURL = canvas.toDataURL();
+        //         imgElement.setAttribute('src', dataURL);
+        //     })
+        //     canvas.remove();
+        // }
+    });
+</script>
+</body>
+</html>
